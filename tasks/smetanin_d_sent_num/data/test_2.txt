@@ -1,0 +1,4 @@
+1234567890 Word?
+The word is cool!
+I think this word is very cool.
+That's a cool word, yes...
