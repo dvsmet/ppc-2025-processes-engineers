@@ -3,7 +3,6 @@
 #include <mpi.h>
 
 #include <cstddef>
-#include <cstdint>
 #include <string>
 
 #include "smetanin_d_sent_num/common/include/common.hpp"
