@@ -17,7 +17,7 @@
 
 namespace smetanin_d_sent_num {
 
-class SmetaninDSentNumTests : public ppc::util::BaseRunFuncTests<InType, OutType, TestType> {
+class SmetaninDSentNumTestsProcesses : public ppc::util::BaseRunFuncTests<InType, OutType, TestType> {
  public:
   static std::string PrintTestParam(const TestType &test_param) {
     int test_index = std::get<0>(test_param);
@@ -64,7 +64,7 @@ class SmetaninDSentNumTests : public ppc::util::BaseRunFuncTests<InType, OutType
   InType input_data_;
   OutType task_answer_ = 0;
 
-  std::string LoadContentFromFile(const std::string &filepath) {
+  static std::string LoadContentFromFile(const std::string &filepath) {
     std::string full_path = ppc::util::GetAbsoluteTaskPath(PPC_ID_smetanin_d_sent_num, filepath);
 
     std::ifstream input_file(full_path);
@@ -87,7 +87,7 @@ class SmetaninDSentNumTests : public ppc::util::BaseRunFuncTests<InType, OutType
     generated_text.reserve(sentence_count * 20);
 
     for (std::size_t sentence_index = 0; sentence_index < sentence_count; ++sentence_index) {
-      int generated_length = character_distribution(random_generator) % 50 + 5;
+      int generated_length = (character_distribution(random_generator) % 50) + 5;
 
       for (int char_position = 0; char_position < generated_length; ++char_position) {
         char random_char = static_cast<char>(character_distribution(random_generator));
@@ -103,7 +103,7 @@ class SmetaninDSentNumTests : public ppc::util::BaseRunFuncTests<InType, OutType
 
 namespace {
 
-TEST_P(SmetaninDSentNumTests, SentenceCountFromText) {
+TEST_P(SmetaninDSentNumTestsProcesses, SentenceCountFromText) {
   ExecuteTest(GetParam());
 }
 
@@ -117,9 +117,9 @@ const auto kTestTasksList =
 
 const auto kGtestValues = ppc::util::ExpandToValues(kTestTasksList);
 
-const auto kPerfTestName = SmetaninDSentNumTests::PrintFuncTestName<SmetaninDSentNumTests>;
+const auto kPerfTestName = SmetaninDSentNumTestsProcesses::PrintFuncTestName<SmetaninDSentNumTestsProcesses>;
 
-INSTANTIATE_TEST_SUITE_P(SentenceCountTest, SmetaninDSentNumTests, kGtestValues, kPerfTestName);
+INSTANTIATE_TEST_SUITE_P(SentenceCountTest, SmetaninDSentNumTestsProcesses, kGtestValues, kPerfTestName);
 
 }  // namespace
 

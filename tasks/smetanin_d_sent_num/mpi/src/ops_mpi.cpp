@@ -3,7 +3,7 @@
 #include <mpi.h>
 
 #include <cstddef>
-#include <iostream>
+#include <cstdint>
 #include <string>
 
 #include "smetanin_d_sent_num/common/include/common.hpp"
@@ -49,7 +49,7 @@ bool SmetaninDSentNumMPI::RunImpl() {
     segment_end = text_length;
   }
 
-  unsigned long long local_sentence_count = 0ULL;
+  std::size_t local_sentence_count = 0;
 
   for (std::size_t position = segment_start; position < segment_end; ++position) {
     char current_symbol = text_data[position];
@@ -68,7 +68,8 @@ bool SmetaninDSentNumMPI::RunImpl() {
     local_sentence_count++;
   }
 
-  unsigned long long global_sentence_count = 0ULL;
+  std::size_t global_sentence_count = 0;
+
   MPI_Reduce(&local_sentence_count, &global_sentence_count, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 
   MPI_Bcast(&global_sentence_count, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
