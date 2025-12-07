@@ -45,7 +45,7 @@ bool SmetaninDSentNumMPI::RunImpl() {
   if (process_rank == 0) {
     text_length = text_data.length();
   }
-  uint64_t text_length_u64 = static_cast<uint64_t>(text_length);
+  auto text_length_u64 = static_cast<uint64_t>(text_length);
   MPI_Bcast(&text_length_u64, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
   text_length = static_cast<std::size_t>(text_length_u64);
 
@@ -55,7 +55,7 @@ bool SmetaninDSentNumMPI::RunImpl() {
     std::size_t base = text_length / static_cast<std::size_t>(process_count);
     std::size_t remainder = text_length % static_cast<std::size_t>(process_count);
     for (int i = 0; i < process_count; ++i) {
-      std::size_t cnt = base + (static_cast<std::size_t>(i) < remainder ? 1u : 0u);
+      std::size_t cnt = base + (static_cast<std::size_t>(i) < remainder ? 1U : 0U);
       sendcounts[i] = static_cast<int>(cnt);
       if (i > 0) {
         displs[i] = displs[i - 1] + sendcounts[i - 1];
@@ -114,7 +114,7 @@ bool SmetaninDSentNumMPI::RunImpl() {
   }
   MPI_Scatter(prev_chars.data(), 1, MPI_CHAR, &prev_char, 1, MPI_CHAR, 0, MPI_COMM_WORLD);
 
-  unsigned long long local_sentence_count = 0ULL;
+  uint64_t local_sentence_count = 0ULL;
   for (std::size_t pos = 0; pos < local_chunk.size(); ++pos) {
     char c = local_chunk[pos];
     if (!is_term(c)) {
@@ -134,7 +134,7 @@ bool SmetaninDSentNumMPI::RunImpl() {
     }
   }
 
-  unsigned long long global_sentence_count = 0ULL;
+  uint64_t global_sentence_count = 0ULL;
   MPI_Reduce(&local_sentence_count, &global_sentence_count, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 
   MPI_Bcast(&global_sentence_count, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
