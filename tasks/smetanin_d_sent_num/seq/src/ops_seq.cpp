@@ -20,43 +20,35 @@ bool SmetaninDSentNumSEQ::ValidationImpl() {
 }
 
 bool SmetaninDSentNumSEQ::PreProcessingImpl() {
-  InType &source_text = GetInput();
-  if (!source_text.empty()) {
-    if (GetInput()[0] == '.' || GetInput()[0] == '!' || GetInput()[0] == '?') {
-      GetInput()[0] = ' ';
-    }
-  }
   return true;
 }
 
 bool SmetaninDSentNumSEQ::RunImpl() {
-  const InType &text_data = GetInput();
-  std::size_t text_length = text_data.length();
+  const InType &text = GetInput();
+
+  auto is_term = [](char ch) { return ch == '.' || ch == '!' || ch == '?'; };
+
   std::size_t sentence_count = 0;
+  bool seen_text = false;
 
-  for (std::size_t current_position = 0; current_position < text_length; ++current_position) {
-    char current_char = text_data[current_position];
-
-    if (current_char != '.' && current_char != '!' && current_char != '?') {
+  for (std::size_t i = 0; i < text.size();) {
+    char c = text[i];
+    if (!is_term(c)) {
+      seen_text = true;
+      ++i;
       continue;
     }
 
-    if (current_position > 0) {
-      char previous_char = text_data[current_position - 1];
-      if (previous_char == '.' || previous_char == '!' || previous_char == '?') {
-        continue;
-      }
+    if (seen_text) {
+      ++sentence_count;
     }
-
-    sentence_count++;
+    while (i < text.size() && is_term(text[i])) {
+      ++i;
+    }
+    seen_text = false;
   }
 
-  if (sentence_count > 0) {
-    GetOutput() = static_cast<OutType>(sentence_count);
-  } else {
-    GetOutput() = 0;
-  }
-
+  GetOutput() = static_cast<OutType>(sentence_count);
   return true;
 }
 
