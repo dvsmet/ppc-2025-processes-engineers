@@ -12,21 +12,29 @@
 namespace smetanin_d_sent_num {
 
 namespace {
-static std::uint64_t BroadcastTextLength(std::size_t &text_length, const std::string &text_data, int process_rank) {
+unsigned long long ToMpiUll(std::uint64_t value) {
+  return static_cast<unsigned long long>(value);
+}
+
+std::uint64_t FromMpiUll(unsigned long long value) {
+  return static_cast<std::uint64_t>(value);
+}
+
+std::uint64_t BroadcastTextLength(std::size_t &text_length, const std::string &text_data, int process_rank) {
   if (process_rank == 0) {
     text_length = text_data.length();
   }
-  std::uint64_t text_length_uint64 = static_cast<std::uint64_t>(text_length);
-  unsigned long long text_length_ull = static_cast<unsigned long long>(text_length_uint64);
+  auto text_length_uint64 = static_cast<std::uint64_t>(text_length);
+  auto text_length_ull = ToMpiUll(text_length_uint64);
   MPI_Bcast(&text_length_ull, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
-  text_length_uint64 = static_cast<std::uint64_t>(text_length_ull);
+  text_length_uint64 = FromMpiUll(text_length_ull);
   text_length = static_cast<std::size_t>(text_length_uint64);
   return text_length_uint64;
 }
 
-static void ComputeSendCountsAndDispls(std::size_t text_length, int process_count, std::vector<int> &sendcounts,
-                                       std::vector<int> &displs) {
-  std::size_t pcount = static_cast<std::size_t>(process_count);
+void ComputeSendCountsAndDispls(std::size_t text_length, int process_count, std::vector<int> &sendcounts,
+                                std::vector<int> &displs) {
+  auto pcount = static_cast<std::size_t>(process_count);
   std::size_t base = text_length / pcount;
   std::size_t remainder = text_length % pcount;
   sendcounts.assign(pcount, 0);
@@ -40,24 +48,27 @@ static void ComputeSendCountsAndDispls(std::size_t text_length, int process_coun
   }
 }
 
-static std::uint64_t CountSentencesInChunk(const std::string &local_chunk, char prev_char) {
-  auto is_term = [](char ch) { return ch == '.' || ch == '!' || ch == '?'; };
+bool IsTerminalChar(char ch) {
+  return ch == '.' || ch == '!' || ch == '?';
+}
+
+std::uint64_t CountSentencesInChunk(const std::string &local_chunk, char prev_char) {
   std::uint64_t local_sentence_count = 0ULL;
   for (std::size_t pos = 0; pos < local_chunk.size(); ++pos) {
     char c = local_chunk[pos];
-    if (!is_term(c)) {
+    if (!IsTerminalChar(c)) {
       continue;
     }
     if (pos == 0) {
-      if (prev_char != '\0' && !is_term(prev_char)) {
+      if (prev_char != '\0' && !IsTerminalChar(prev_char)) {
         ++local_sentence_count;
       }
     } else {
-      if (!is_term(local_chunk[pos - 1])) {
+      if (!IsTerminalChar(local_chunk[pos - 1])) {
         ++local_sentence_count;
       }
     }
-    while (pos + 1 < local_chunk.size() && is_term(local_chunk[pos + 1])) {
+    while (pos + 1 < local_chunk.size() && IsTerminalChar(local_chunk[pos + 1])) {
       ++pos;
     }
   }
@@ -159,13 +170,13 @@ bool SmetaninDSentNumMPI::RunImpl() {
   std::uint64_t local_sentence_count = CountSentencesInChunk(local_chunk, prev_char);
 
   std::uint64_t global_sentence_count = 0ULL;
-  unsigned long long local_sentence_count_ull = static_cast<unsigned long long>(local_sentence_count);
-  unsigned long long global_sentence_count_ull = 0ULL;
+  auto local_sentence_count_ull = ToMpiUll(local_sentence_count);
+  auto global_sentence_count_ull = ToMpiUll(0ULL);
   MPI_Reduce(&local_sentence_count_ull, &global_sentence_count_ull, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, 0,
              MPI_COMM_WORLD);
 
   MPI_Bcast(&global_sentence_count_ull, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
-  global_sentence_count = static_cast<std::uint64_t>(global_sentence_count_ull);
+  global_sentence_count = FromMpiUll(global_sentence_count_ull);
   GetOutput() = static_cast<OutType>(global_sentence_count);
 
   return true;
