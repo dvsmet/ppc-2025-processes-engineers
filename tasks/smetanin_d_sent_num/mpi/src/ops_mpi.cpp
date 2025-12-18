@@ -2,6 +2,7 @@
 
 #include <mpi.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -53,7 +54,9 @@ void ComputeSendCounts(const std::vector<std::size_t> &starts, const std::vector
 std::size_t CountLocalSentences(const std::string &local_text, int local_start_offset, std::size_t segment_start_global,
                                 std::size_t segment_size_global) {
   std::size_t local_sentence_count = 0;
-  const int end = static_cast<int>(local_text.size());
+  const int max_index = static_cast<int>(local_text.size());
+  const int computed_end = local_start_offset + static_cast<int>(segment_size_global);
+  const int end = std::min(max_index, computed_end);
   for (int idx = local_start_offset; idx < end; ++idx) {
     const auto local_idx = static_cast<std::size_t>(idx);
     char current_symbol = local_text[local_idx];
