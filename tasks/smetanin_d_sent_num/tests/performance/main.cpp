@@ -32,9 +32,12 @@ class SmetaninDRunPerfTestProcesses : public ppc::util::BaseRunPerfTests<InType,
     file.close();
 
     task_answer_ = 0;
-    for (char c : input_data_) {
+    for (size_t i = 0; i < input_data_.length(); ++i) {
+      char c = input_data_[i];
       if (c == '.' || c == '!' || c == '?') {
-        task_answer_++;
+        if (i == 0 || (input_data_[i - 1] != '.' && input_data_[i - 1] != '!' && input_data_[i - 1] != '?')) {
+          task_answer_++;
+        }
       }
     }
   }

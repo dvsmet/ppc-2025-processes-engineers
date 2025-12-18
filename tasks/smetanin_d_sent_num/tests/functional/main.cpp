@@ -47,7 +47,7 @@ class SmetaninDSentNumTestsProcesses : public ppc::util::BaseRunFuncTests<InType
       ss << file.rdbuf();
       text = ss.str();
 
-      task_answer_ = static_cast<OutType>(CalculateExpectedFromText(text));
+      task_answer_ = std::get<2>(params);
       input_data_ = text;
     }
   }
@@ -98,23 +98,6 @@ class SmetaninDSentNumTestsProcesses : public ppc::util::BaseRunFuncTests<InType
     }
 
     return generated_text;
-  }
-
-  static std::size_t CalculateExpectedFromText(const std::string &text) {
-    auto is_term = [](char ch) { return ch == '.' || ch == '!' || ch == '?'; };
-    std::size_t count = 0;
-    bool prev_is_term = true;
-    for (char c : text) {
-      if (!is_term(c)) {
-        prev_is_term = false;
-        continue;
-      }
-      if (!prev_is_term) {
-        ++count;
-      }
-      prev_is_term = true;
-    }
-    return count;
   }
 };
 

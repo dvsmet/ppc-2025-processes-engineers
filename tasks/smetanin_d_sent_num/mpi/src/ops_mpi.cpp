@@ -3,78 +3,12 @@
 #include <mpi.h>
 
 #include <cstddef>
-#include <cstdint>
 #include <string>
 #include <vector>
 
 #include "smetanin_d_sent_num/common/include/common.hpp"
 
 namespace smetanin_d_sent_num {
-
-namespace {
-unsigned long long ToMpiUll(std::uint64_t value) {
-  return static_cast<unsigned long long>(value);
-}
-
-std::uint64_t FromMpiUll(unsigned long long value) {
-  return static_cast<std::uint64_t>(value);
-}
-
-std::uint64_t BroadcastTextLength(std::size_t &text_length, const std::string &text_data, int process_rank) {
-  if (process_rank == 0) {
-    text_length = text_data.length();
-  }
-  auto text_length_uint64 = static_cast<std::uint64_t>(text_length);
-  auto text_length_ull = ToMpiUll(text_length_uint64);
-  MPI_Bcast(&text_length_ull, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
-  text_length_uint64 = FromMpiUll(text_length_ull);
-  text_length = static_cast<std::size_t>(text_length_uint64);
-  return text_length_uint64;
-}
-
-void ComputeSendCountsAndDispls(std::size_t text_length, int process_count, std::vector<int> &sendcounts,
-                                std::vector<int> &displs) {
-  auto pcount = static_cast<std::size_t>(process_count);
-  std::size_t base = text_length / pcount;
-  std::size_t remainder = text_length % pcount;
-  sendcounts.assign(pcount, 0);
-  displs.assign(pcount, 0);
-  for (std::size_t i = 0; i < pcount; ++i) {
-    std::size_t cnt = base + (i < remainder ? 1U : 0U);
-    sendcounts[static_cast<int>(i)] = static_cast<int>(cnt);
-    if (i > 0) {
-      displs[static_cast<int>(i)] = displs[static_cast<int>(i) - 1] + sendcounts[static_cast<int>(i) - 1];
-    }
-  }
-}
-
-bool IsTerminalChar(char ch) {
-  return ch == '.' || ch == '!' || ch == '?';
-}
-
-std::uint64_t CountSentencesInChunk(const std::string &local_chunk, char prev_char) {
-  std::uint64_t local_sentence_count = 0ULL;
-  for (std::size_t pos = 0; pos < local_chunk.size(); ++pos) {
-    char c = local_chunk[pos];
-    if (!IsTerminalChar(c)) {
-      continue;
-    }
-    if (pos == 0) {
-      if (prev_char != '\0' && !IsTerminalChar(prev_char)) {
-        ++local_sentence_count;
-      }
-    } else {
-      if (!IsTerminalChar(local_chunk[pos - 1])) {
-        ++local_sentence_count;
-      }
-    }
-    while (pos + 1 < local_chunk.size() && IsTerminalChar(local_chunk[pos + 1])) {
-      ++pos;
-    }
-  }
-  return local_sentence_count;
-}
-}  // namespace
 
 SmetaninDSentNumMPI::SmetaninDSentNumMPI(const InType &in) {
   SetTypeOfTask(GetStaticTypeOfTask());
@@ -90,16 +24,13 @@ bool SmetaninDSentNumMPI::ValidationImpl() {
 }
 
 bool SmetaninDSentNumMPI::PreProcessingImpl() {
-  int process_rank = 0;
-  MPI_Comm_rank(MPI_COMM_WORLD, &process_rank);
-
-  (void)process_rank;
+  if (GetInput()[0] == '.' || GetInput()[0] == '!' || GetInput()[0] == '?') {
+    GetInput()[0] = ' ';
+  }
   return true;
 }
 
 bool SmetaninDSentNumMPI::RunImpl() {
-  const InType &text_data = GetInput();
-
   int process_count = 1;
   int process_rank = 0;
 
@@ -107,76 +38,110 @@ bool SmetaninDSentNumMPI::RunImpl() {
   MPI_Comm_rank(MPI_COMM_WORLD, &process_rank);
 
   std::size_t text_length = 0;
-  BroadcastTextLength(text_length, text_data, process_rank);
-
-  std::vector<int> sendcounts;
-  std::vector<int> displs;
+  const InType *full_text_ptr = nullptr;
   if (process_rank == 0) {
-    ComputeSendCountsAndDispls(text_length, process_count, sendcounts, displs);
-  } else {
-    sendcounts.assign(static_cast<std::size_t>(process_count), 0);
-    displs.assign(static_cast<std::size_t>(process_count), 0);
+    full_text_ptr = &GetInput();
+    text_length = full_text_ptr->length();
   }
 
-  int local_count = 0;
-  MPI_Scatter(sendcounts.data(), 1, MPI_INT, &local_count, 1, MPI_INT, 0, MPI_COMM_WORLD);
+  MPI_Bcast(&text_length, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
 
-  if (local_count < 0) {
-    MPI_Abort(MPI_COMM_WORLD, 1);
-    return false;
+  if (text_length == 0) {
+    std::size_t local_sentence_count = 0;
+    std::size_t global_sentence_count = 0;
+
+    MPI_Reduce(&local_sentence_count, &global_sentence_count, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&global_sentence_count, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
+
+    GetOutput() = static_cast<OutType>(global_sentence_count);
+    return true;
   }
 
-  std::vector<char> local_buffer;
-  if (local_count > 0) {
-    local_buffer.resize(static_cast<std::size_t>(local_count));
+  std::vector<std::size_t> segment_starts(process_count);
+  std::vector<std::size_t> segment_sizes(process_count);
+
+  const std::size_t base_chunk = text_length / static_cast<std::size_t>(process_count);
+  const std::size_t remainder = text_length % static_cast<std::size_t>(process_count);
+
+  std::size_t current_start = 0;
+  for (int r = 0; r < process_count; ++r) {
+    std::size_t size = base_chunk + (static_cast<std::size_t>(r) < remainder ? 1u : 0u);
+    segment_starts[r] = current_start;
+    segment_sizes[r] = size;
+    current_start += size;
   }
+
+  std::vector<int> sendcounts(process_count, 0);
+  std::vector<int> displs(process_count, 0);
+
+  for (int r = 0; r < process_count; ++r) {
+    std::size_t real_start = segment_starts[r];
+    std::size_t real_size = segment_sizes[r];
+
+    if (real_size == 0) {
+      sendcounts[r] = 0;
+      displs[r] = static_cast<int>(real_start);
+      continue;
+    }
+
+    std::size_t send_start = real_start;
+    std::size_t send_size = real_size;
+
+    if (r != 0 && real_start > 0) {
+      send_start = real_start - 1;
+      send_size = real_size + 1;
+    }
+
+    sendcounts[r] = static_cast<int>(send_size);
+    displs[r] = static_cast<int>(send_start);
+  }
+
+  const int local_buffer_size = sendcounts[process_rank];
+  std::string local_text(static_cast<std::size_t>(local_buffer_size), ' ');
 
   const char *sendbuf = nullptr;
-  if (process_rank == 0 && text_length > 0) {
-    sendbuf = text_data.data();
+  if (process_rank == 0 && full_text_ptr != nullptr) {
+    sendbuf = full_text_ptr->data();
   }
 
-  char dummy_recv = '\0';
-  char *recv_ptr = local_count > 0 ? local_buffer.data() : &dummy_recv;
+  char *recvbuf = local_buffer_size > 0 ? local_text.data() : nullptr;
 
-  int scatterv_ret = MPI_Scatterv(sendbuf, sendcounts.data(), displs.data(), MPI_CHAR, recv_ptr, local_count, MPI_CHAR,
-                                  0, MPI_COMM_WORLD);
-  if (scatterv_ret != MPI_SUCCESS) {
-    MPI_Abort(MPI_COMM_WORLD, scatterv_ret);
-    return false;
-  }
+  MPI_Scatterv(sendbuf, sendcounts.data(), displs.data(), MPI_CHAR, recvbuf, local_buffer_size, MPI_CHAR, 0,
+               MPI_COMM_WORLD);
 
-  std::string local_chunk;
-  if (local_count > 0) {
-    local_chunk.assign(local_buffer.begin(), local_buffer.end());
-  } else {
-    local_chunk.clear();
-  }
+  std::size_t local_sentence_count = 0;
 
-  char prev_char = '\0';
-  std::vector<char> prev_chars;
-  if (process_rank == 0) {
-    prev_chars.resize(static_cast<std::size_t>(process_count));
-    for (int i = 0; i < process_count; ++i) {
-      if (displs[i] == 0) {
-        prev_chars[i] = '\0';
-      } else {
-        prev_chars[i] = text_data[static_cast<std::size_t>(displs[i]) - 1];
+  if (local_buffer_size > 0) {
+    const std::size_t segment_start_global = segment_starts[process_rank];
+    const std::size_t segment_size_global = segment_sizes[process_rank];
+
+    const int local_start_offset = (process_rank == 0 || segment_start_global == 0 || segment_size_global == 0) ? 0 : 1;
+
+    for (int i = local_start_offset; i < local_buffer_size; ++i) {
+      char current_symbol = local_text[static_cast<std::size_t>(i)];
+
+      if (current_symbol != '.' && current_symbol != '!' && current_symbol != '?') {
+        continue;
       }
+
+      std::size_t global_pos = segment_start_global + static_cast<std::size_t>(i - local_start_offset);
+
+      if (global_pos > 0) {
+        char previous_symbol = local_text[static_cast<std::size_t>(i) - 1];
+        if (previous_symbol == '.' || previous_symbol == '!' || previous_symbol == '?') {
+          continue;
+        }
+      }
+
+      local_sentence_count++;
     }
   }
-  MPI_Scatter(prev_chars.data(), 1, MPI_CHAR, &prev_char, 1, MPI_CHAR, 0, MPI_COMM_WORLD);
 
-  std::uint64_t local_sentence_count = CountSentencesInChunk(local_chunk, prev_char);
+  std::size_t global_sentence_count = 0;
 
-  std::uint64_t global_sentence_count = 0ULL;
-  auto local_sentence_count_ull = ToMpiUll(local_sentence_count);
-  auto global_sentence_count_ull = ToMpiUll(0ULL);
-  MPI_Reduce(&local_sentence_count_ull, &global_sentence_count_ull, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, 0,
-             MPI_COMM_WORLD);
+  MPI_Reduce(&local_sentence_count, &global_sentence_count, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Bcast(&global_sentence_count, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
 
-  MPI_Bcast(&global_sentence_count_ull, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
-  global_sentence_count = FromMpiUll(global_sentence_count_ull);
   GetOutput() = static_cast<OutType>(global_sentence_count);
 
   return true;
