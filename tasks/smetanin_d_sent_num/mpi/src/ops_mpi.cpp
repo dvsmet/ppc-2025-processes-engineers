@@ -11,41 +11,41 @@
 namespace smetanin_d_sent_num {
 
 namespace {
-static void ComputeSegments(std::size_t text_length, std::size_t proc_count, std::vector<std::size_t> &starts,
-                            std::vector<std::size_t> &sizes) {
+void ComputeSegments(std::size_t text_length, std::size_t proc_count, std::vector<std::size_t> &starts,
+                     std::vector<std::size_t> &sizes) {
   const std::size_t base_chunk = text_length / proc_count;
   const std::size_t remainder = text_length % proc_count;
   std::size_t cur = 0;
-  for (std::size_t p = 0; p < proc_count; ++p) {
-    std::size_t add = (p < remainder) ? 1U : 0U;
-    sizes[p] = base_chunk + add;
-    starts[p] = cur;
-    cur += sizes[p];
+  for (std::size_t proc = 0; proc < proc_count; ++proc) {
+    std::size_t add = (proc < remainder) ? 1U : 0U;
+    sizes[proc] = base_chunk + add;
+    starts[proc] = cur;
+    cur += sizes[proc];
   }
 }
 
-static void ComputeSendCounts(const std::vector<std::size_t> &starts, const std::vector<std::size_t> &sizes,
-                              std::vector<int> &sendcounts, std::vector<int> &displs) {
+void ComputeSendCounts(const std::vector<std::size_t> &starts, const std::vector<std::size_t> &sizes,
+                       std::vector<int> &sendcounts, std::vector<int> &displs) {
   const std::size_t proc_count = starts.size();
-  for (std::size_t p = 0; p < proc_count; ++p) {
-    const std::size_t real_start = starts[p];
-    const std::size_t real_size = sizes[p];
+  for (std::size_t proc = 0; proc < proc_count; ++proc) {
+    const std::size_t real_start = starts[proc];
+    const std::size_t real_size = sizes[proc];
 
     if (real_size == 0) {
-      sendcounts[p] = 0;
-      displs[p] = static_cast<int>(real_start);
+      sendcounts[proc] = 0;
+      displs[proc] = static_cast<int>(real_start);
       continue;
     }
 
     std::size_t send_start = real_start;
     std::size_t send_size = real_size;
-    if (p != 0 && real_start > 0) {
+    if (proc != 0 && real_start > 0) {
       send_start = real_start - 1;
       send_size = real_size + 1U;
     }
 
-    sendcounts[p] = static_cast<int>(send_size);
-    displs[p] = static_cast<int>(send_start);
+    sendcounts[proc] = static_cast<int>(send_size);
+    displs[proc] = static_cast<int>(send_start);
   }
 }
 
@@ -129,8 +129,8 @@ bool SmetaninDSentNumMPI::RunImpl() {
 
     const int local_start_offset = (process_rank == 0 || segment_start_global == 0 || segment_size_global == 0) ? 0 : 1;
 
-    for (int i = local_start_offset; i < local_buffer_size; ++i) {
-      const std::size_t local_idx = static_cast<std::size_t>(i);
+    for (int idx = local_start_offset; idx < local_buffer_size; ++idx) {
+      const std::size_t local_idx = static_cast<std::size_t>(idx);
       char current_symbol = local_text[local_idx];
 
       if (current_symbol != '.' && current_symbol != '!' && current_symbol != '?') {
