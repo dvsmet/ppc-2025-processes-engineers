@@ -1,9 +1,7 @@
 #include "smetanin_d_sent_num/seq/include/ops_seq.hpp"
 
-#include <cstddef>
-#include <string>
-
 #include "smetanin_d_sent_num/common/include/common.hpp"
+#include <cstddef>
 
 namespace smetanin_d_sent_num {
 

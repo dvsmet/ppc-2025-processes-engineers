@@ -3,6 +3,7 @@
 #include <mpi.h>
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -49,6 +50,32 @@ void ComputeSendCounts(const std::vector<std::size_t> &starts, const std::vector
   }
 }
 
+std::size_t CountLocalSentences(const std::string &local_text, int local_start_offset,
+                                std::size_t segment_start_global, std::size_t) {
+  std::size_t local_sentence_count = 0;
+  const int end = static_cast<int>(local_text.size());
+  for (int idx = local_start_offset; idx < end; ++idx) {
+    const auto local_idx = static_cast<std::size_t>(idx);
+    char current_symbol = local_text[local_idx];
+
+    if (current_symbol != '.' && current_symbol != '!' && current_symbol != '?') {
+      continue;
+    }
+
+    std::size_t global_pos = segment_start_global + (local_idx - static_cast<std::size_t>(local_start_offset));
+
+    if (global_pos > 0) {
+      char previous_symbol = local_text[local_idx - 1];
+      if (previous_symbol == '.' || previous_symbol == '!' || previous_symbol == '?') {
+        continue;
+      }
+    }
+
+    local_sentence_count++;
+  }
+  return local_sentence_count;
+}
+
 }  // namespace
 
 SmetaninDSentNumMPI::SmetaninDSentNumMPI(const InType &in) {
@@ -85,20 +112,25 @@ bool SmetaninDSentNumMPI::RunImpl() {
     text_length = full_text_ptr->length();
   }
 
-  MPI_Bcast(&text_length, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
+  auto text_length_u = static_cast<std::uint64_t>(text_length);
+  MPI_Bcast(&text_length_u, 1, MPI_UINT64_T, 0, MPI_COMM_WORLD);
+  text_length = static_cast<std::size_t>(text_length_u);
 
   if (text_length == 0) {
     std::size_t local_sentence_count = 0;
     std::size_t global_sentence_count = 0;
 
-    MPI_Reduce(&local_sentence_count, &global_sentence_count, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&global_sentence_count, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
+    auto local_u = static_cast<std::uint64_t>(local_sentence_count);
+    auto global_u = static_cast<std::uint64_t>(0);
+    MPI_Reduce(&local_u, &global_u, 1, MPI_UINT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&global_u, 1, MPI_UINT64_T, 0, MPI_COMM_WORLD);
 
+    global_sentence_count = static_cast<std::size_t>(global_u);
     GetOutput() = static_cast<OutType>(global_sentence_count);
     return true;
   }
 
-  const std::size_t proc_count = static_cast<std::size_t>(process_count);
+  const auto proc_count = static_cast<std::size_t>(process_count);
   std::vector<std::size_t> segment_starts(proc_count);
   std::vector<std::size_t> segment_sizes(proc_count);
 
@@ -124,37 +156,21 @@ bool SmetaninDSentNumMPI::RunImpl() {
   std::size_t local_sentence_count = 0;
 
   if (local_buffer_size > 0) {
-    const std::size_t segment_start_global = segment_starts[process_rank];
-    const std::size_t segment_size_global = segment_sizes[process_rank];
+    const auto segment_start_global = segment_starts[process_rank];
+    const auto segment_size_global = segment_sizes[process_rank];
 
     const int local_start_offset = (process_rank == 0 || segment_start_global == 0 || segment_size_global == 0) ? 0 : 1;
 
-    for (int idx = local_start_offset; idx < local_buffer_size; ++idx) {
-      const std::size_t local_idx = static_cast<std::size_t>(idx);
-      char current_symbol = local_text[local_idx];
-
-      if (current_symbol != '.' && current_symbol != '!' && current_symbol != '?') {
-        continue;
-      }
-
-      std::size_t global_pos = segment_start_global + (local_idx - static_cast<std::size_t>(local_start_offset));
-
-      if (global_pos > 0) {
-        char previous_symbol = local_text[local_idx - 1];
-        if (previous_symbol == '.' || previous_symbol == '!' || previous_symbol == '?') {
-          continue;
-        }
-      }
-
-      local_sentence_count++;
-    }
+    local_sentence_count = CountLocalSentences(local_text, local_start_offset, segment_start_global, segment_size_global);
   }
 
   std::size_t global_sentence_count = 0;
+  auto local_u = static_cast<std::uint64_t>(local_sentence_count);
+  auto global_u = static_cast<std::uint64_t>(0);
+  MPI_Reduce(&local_u, &global_u, 1, MPI_UINT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Bcast(&global_u, 1, MPI_UINT64_T, 0, MPI_COMM_WORLD);
 
-  MPI_Reduce(&local_sentence_count, &global_sentence_count, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Bcast(&global_sentence_count, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
-
+  global_sentence_count = static_cast<std::size_t>(global_u);
   GetOutput() = static_cast<OutType>(global_sentence_count);
 
   return true;
