@@ -50,8 +50,8 @@ void ComputeSendCounts(const std::vector<std::size_t> &starts, const std::vector
   }
 }
 
-std::size_t CountLocalSentences(const std::string &local_text, int local_start_offset,
-                                std::size_t segment_start_global, std::size_t) {
+std::size_t CountLocalSentences(const std::string &local_text, int local_start_offset, std::size_t segment_start_global,
+                                std::size_t) {
   std::size_t local_sentence_count = 0;
   const int end = static_cast<int>(local_text.size());
   for (int idx = local_start_offset; idx < end; ++idx) {
@@ -161,7 +161,8 @@ bool SmetaninDSentNumMPI::RunImpl() {
 
     const int local_start_offset = (process_rank == 0 || segment_start_global == 0 || segment_size_global == 0) ? 0 : 1;
 
-    local_sentence_count = CountLocalSentences(local_text, local_start_offset, segment_start_global, segment_size_global);
+    local_sentence_count =
+        CountLocalSentences(local_text, local_start_offset, segment_start_global, segment_size_global);
   }
 
   std::size_t global_sentence_count = 0;
