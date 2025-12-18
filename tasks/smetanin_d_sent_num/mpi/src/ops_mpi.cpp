@@ -10,6 +10,47 @@
 
 namespace smetanin_d_sent_num {
 
+namespace {
+static void ComputeSegments(std::size_t text_length, std::size_t proc_count, std::vector<std::size_t> &starts,
+                            std::vector<std::size_t> &sizes) {
+  const std::size_t base_chunk = text_length / proc_count;
+  const std::size_t remainder = text_length % proc_count;
+  std::size_t cur = 0;
+  for (std::size_t p = 0; p < proc_count; ++p) {
+    std::size_t add = (p < remainder) ? 1U : 0U;
+    sizes[p] = base_chunk + add;
+    starts[p] = cur;
+    cur += sizes[p];
+  }
+}
+
+static void ComputeSendCounts(const std::vector<std::size_t> &starts, const std::vector<std::size_t> &sizes,
+                              std::vector<int> &sendcounts, std::vector<int> &displs) {
+  const std::size_t proc_count = starts.size();
+  for (std::size_t p = 0; p < proc_count; ++p) {
+    const std::size_t real_start = starts[p];
+    const std::size_t real_size = sizes[p];
+
+    if (real_size == 0) {
+      sendcounts[p] = 0;
+      displs[p] = static_cast<int>(real_start);
+      continue;
+    }
+
+    std::size_t send_start = real_start;
+    std::size_t send_size = real_size;
+    if (p != 0 && real_start > 0) {
+      send_start = real_start - 1;
+      send_size = real_size + 1U;
+    }
+
+    sendcounts[p] = static_cast<int>(send_size);
+    displs[p] = static_cast<int>(send_start);
+  }
+}
+
+}  // namespace
+
 SmetaninDSentNumMPI::SmetaninDSentNumMPI(const InType &in) {
   SetTypeOfTask(GetStaticTypeOfTask());
   GetInput() = in;
@@ -57,44 +98,15 @@ bool SmetaninDSentNumMPI::RunImpl() {
     return true;
   }
 
-  std::vector<std::size_t> segment_starts(process_count);
-  std::vector<std::size_t> segment_sizes(process_count);
+  const std::size_t proc_count = static_cast<std::size_t>(process_count);
+  std::vector<std::size_t> segment_starts(proc_count);
+  std::vector<std::size_t> segment_sizes(proc_count);
 
-  const std::size_t base_chunk = text_length / static_cast<std::size_t>(process_count);
-  const std::size_t remainder = text_length % static_cast<std::size_t>(process_count);
+  ComputeSegments(text_length, proc_count, segment_starts, segment_sizes);
 
-  std::size_t current_start = 0;
-  for (int r = 0; r < process_count; ++r) {
-    std::size_t size = base_chunk + (static_cast<std::size_t>(r) < remainder ? 1u : 0u);
-    segment_starts[r] = current_start;
-    segment_sizes[r] = size;
-    current_start += size;
-  }
-
-  std::vector<int> sendcounts(process_count, 0);
-  std::vector<int> displs(process_count, 0);
-
-  for (int r = 0; r < process_count; ++r) {
-    std::size_t real_start = segment_starts[r];
-    std::size_t real_size = segment_sizes[r];
-
-    if (real_size == 0) {
-      sendcounts[r] = 0;
-      displs[r] = static_cast<int>(real_start);
-      continue;
-    }
-
-    std::size_t send_start = real_start;
-    std::size_t send_size = real_size;
-
-    if (r != 0 && real_start > 0) {
-      send_start = real_start - 1;
-      send_size = real_size + 1;
-    }
-
-    sendcounts[r] = static_cast<int>(send_size);
-    displs[r] = static_cast<int>(send_start);
-  }
+  std::vector<int> sendcounts(proc_count, 0);
+  std::vector<int> displs(proc_count, 0);
+  ComputeSendCounts(segment_starts, segment_sizes, sendcounts, displs);
 
   const int local_buffer_size = sendcounts[process_rank];
   std::string local_text(static_cast<std::size_t>(local_buffer_size), ' ');
@@ -118,16 +130,17 @@ bool SmetaninDSentNumMPI::RunImpl() {
     const int local_start_offset = (process_rank == 0 || segment_start_global == 0 || segment_size_global == 0) ? 0 : 1;
 
     for (int i = local_start_offset; i < local_buffer_size; ++i) {
-      char current_symbol = local_text[static_cast<std::size_t>(i)];
+      const std::size_t local_idx = static_cast<std::size_t>(i);
+      char current_symbol = local_text[local_idx];
 
       if (current_symbol != '.' && current_symbol != '!' && current_symbol != '?') {
         continue;
       }
 
-      std::size_t global_pos = segment_start_global + static_cast<std::size_t>(i - local_start_offset);
+      std::size_t global_pos = segment_start_global + (local_idx - static_cast<std::size_t>(local_start_offset));
 
       if (global_pos > 0) {
-        char previous_symbol = local_text[static_cast<std::size_t>(i) - 1];
+        char previous_symbol = local_text[local_idx - 1];
         if (previous_symbol == '.' || previous_symbol == '!' || previous_symbol == '?') {
           continue;
         }
