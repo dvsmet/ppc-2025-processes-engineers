@@ -4,7 +4,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
-#include <string>
 #include <vector>
 
 #include "smetanin_d_gauss_vert_sch/common/include/common.hpp"
@@ -26,8 +25,8 @@ GaussBandInput MakePerfSystem(int n, int bandwidth) {
 
   for (int ii = 0; ii < n; ++ii) {
     for (int jj = std::max(0, ii - bandwidth); jj <= std::min(n - 1, ii + bandwidth); ++jj) {
-      double value = (ii == jj) ? static_cast<double>(2 * bandwidth + 1) : 1.0;
-      std::size_t idx = static_cast<std::size_t>(ii) * static_cast<std::size_t>(n + 1) + static_cast<std::size_t>(jj);
+      double value = (ii == jj) ? static_cast<double>((2 * bandwidth) + 1) : 1.0;
+      std::size_t idx = (static_cast<std::size_t>(ii) * static_cast<std::size_t>(n + 1)) + static_cast<std::size_t>(jj);
       input.augmented_matrix[idx] = value;
     }
   }
@@ -35,10 +34,10 @@ GaussBandInput MakePerfSystem(int n, int bandwidth) {
   for (int ii = 0; ii < n; ++ii) {
     double b_val = 0.0;
     for (int jj = std::max(0, ii - bandwidth); jj <= std::min(n - 1, ii + bandwidth); ++jj) {
-      std::size_t idx = static_cast<std::size_t>(ii) * static_cast<std::size_t>(n + 1) + static_cast<std::size_t>(jj);
+      std::size_t idx = (static_cast<std::size_t>(ii) * static_cast<std::size_t>(n + 1)) + static_cast<std::size_t>(jj);
       b_val += input.augmented_matrix[idx] * x_true[static_cast<std::size_t>(jj)];
     }
-    std::size_t b_idx = static_cast<std::size_t>(ii) * static_cast<std::size_t>(n + 1) + static_cast<std::size_t>(n);
+    std::size_t b_idx = (static_cast<std::size_t>(ii) * static_cast<std::size_t>(n + 1)) + static_cast<std::size_t>(n);
     input.augmented_matrix[b_idx] = b_val;
   }
 

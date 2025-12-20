@@ -15,11 +15,11 @@ namespace smetanin_d_gauss_vert_sch {
 namespace {
 
 double &At(std::vector<double> &data, int n, int row, int col) {
-  return data[static_cast<std::size_t>(row) * static_cast<std::size_t>(n + 1) + static_cast<std::size_t>(col)];
+  return data[(static_cast<std::size_t>(row) * static_cast<std::size_t>(n + 1)) + static_cast<std::size_t>(col)];
 }
 
 const double &At(const std::vector<double> &data, int n, int row, int col) {
-  return data[static_cast<std::size_t>(row) * static_cast<std::size_t>(n + 1) + static_cast<std::size_t>(col)];
+  return data[(static_cast<std::size_t>(row) * static_cast<std::size_t>(n + 1)) + static_cast<std::size_t>(col)];
 }
 
 bool FindAndSwapPivot(std::vector<double> &a, int n, int i, int bw, double eps) {
