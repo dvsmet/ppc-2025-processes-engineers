@@ -94,7 +94,7 @@ Task run mode (время, скорость):
 - Самая высокая относительная выгода наблюдается для больших относительных различий между последовательным `seq` и `mpi`.
 
 ## 9. References
-1. Материалы курса: <https://learning-process.github.io/parallel_programming_course/ru/common_information/report.html>
-2. Microsoft MPI: <https://learn.microsoft.com/ru-ru/message-passing-interface/mpi-reference>
-3. OpenMPI документация: <https://www.open-mpi.org/>
-4. Сысоев А. В. *Лекции по параллельному программированию*
+1. Материалы курса: <https://learning-process.github.io/parallel_programming_course/ru/common_information/report.html>.
+2. Microsoft MPI: <https://learn.microsoft.com/ru-ru/message-passing-interface/mpi-reference>.
+3. OpenMPI документация: <https://www.open-mpi.org/>.
+4. Сысоев А. В. *Лекции по параллельному программированию*.

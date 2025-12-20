@@ -80,8 +80,8 @@ TEST_P(SmetaninDRunPerfTestProcesses2, RunPerfModes) {
   ExecuteTest(GetParam());
 }
 
-const auto kAllPerfTasks =
-    ppc::util::MakeAllPerfTasks<InType, SmetaninDGaussVertSchMPI, SmetaninDGaussVertSchSEQ>(PPC_SETTINGS_smetanin_d_gauss_vert_sch);
+const auto kAllPerfTasks = ppc::util::MakeAllPerfTasks<InType, SmetaninDGaussVertSchMPI, SmetaninDGaussVertSchSEQ>(
+    PPC_SETTINGS_smetanin_d_gauss_vert_sch);
 
 const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 

@@ -43,9 +43,8 @@ bool SolveDenseSystem(std::vector<double> a, int n, std::vector<double> &x) {
       }
     }
     for (int rr = i + 1; rr < n; ++rr) {
-      double factor =
-          a[static_cast<std::size_t>(rr) * static_cast<std::size_t>(n + 1) + i] /
-          a[static_cast<std::size_t>(i) * static_cast<std::size_t>(n + 1) + i];
+      double factor = a[static_cast<std::size_t>(rr) * static_cast<std::size_t>(n + 1) + i] /
+                      a[static_cast<std::size_t>(i) * static_cast<std::size_t>(n + 1) + i];
       if (std::fabs(factor) < eps) {
         continue;
       }
@@ -61,8 +60,7 @@ bool SolveDenseSystem(std::vector<double> a, int n, std::vector<double> &x) {
   for (int i = n - 1; i >= 0; --i) {
     double sum = a[static_cast<std::size_t>(i) * static_cast<std::size_t>(n + 1) + n];
     for (int cj = i + 1; cj < n; ++cj) {
-      sum -= a[static_cast<std::size_t>(i) * static_cast<std::size_t>(n + 1) + cj] *
-             x[static_cast<std::size_t>(cj)];
+      sum -= a[static_cast<std::size_t>(i) * static_cast<std::size_t>(n + 1) + cj] * x[static_cast<std::size_t>(cj)];
     }
     double diag = a[static_cast<std::size_t>(i) * static_cast<std::size_t>(n + 1) + i];
     if (std::fabs(diag) < eps) {
@@ -75,8 +73,7 @@ bool SolveDenseSystem(std::vector<double> a, int n, std::vector<double> &x) {
 
 GaussBandInput LoadSystemFromFile(const std::string &filename) {
   GaussBandInput input;
-  const std::string abs_path =
-      ppc::util::GetAbsoluteTaskPath(PPC_ID_smetanin_d_gauss_vert_sch, filename);
+  const std::string abs_path = ppc::util::GetAbsoluteTaskPath(PPC_ID_smetanin_d_gauss_vert_sch, filename);
   std::ifstream file(abs_path);
   if (!file.is_open()) {
     throw std::runtime_error("Failed to open file: " + abs_path);
@@ -97,8 +94,7 @@ GaussBandInput LoadSystemFromFile(const std::string &filename) {
 
 }  // namespace
 
-class SmetaninDGaussVertSchFuncTests
-    : public ppc::util::BaseRunFuncTests<InType, OutType, TestType> {
+class SmetaninDGaussVertSchFuncTests : public ppc::util::BaseRunFuncTests<InType, OutType, TestType> {
  public:
   static std::string PrintTestParam(const TestType &test_param) {
     int idx = std::get<0>(test_param);
@@ -114,8 +110,7 @@ class SmetaninDGaussVertSchFuncTests
 
  protected:
   void SetUp() override {
-    TestType params =
-        std::get<static_cast<std::size_t>(ppc::util::GTestParamIndex::kTestParams)>(GetParam());
+    TestType params = std::get<static_cast<std::size_t>(ppc::util::GTestParamIndex::kTestParams)>(GetParam());
     const std::string &file = std::get<1>(params);
 
     input_data_ = LoadSystemFromFile(file);
@@ -138,7 +133,9 @@ class SmetaninDGaussVertSchFuncTests
     return true;
   }
 
-  InType GetTestInputData() final { return input_data_; }
+  InType GetTestInputData() final {
+    return input_data_;
+  }
 
  private:
   InType input_data_;
@@ -147,25 +144,22 @@ class SmetaninDGaussVertSchFuncTests
 
 namespace {
 
-TEST_P(SmetaninDGaussVertSchFuncTests, SolveBandSystem) { ExecuteTest(GetParam()); }
+TEST_P(SmetaninDGaussVertSchFuncTests, SolveBandSystem) {
+  ExecuteTest(GetParam());
+}
 
-const std::array<TestType, 3> kTestParam = {std::make_tuple(0, "test_0.txt"),
-                                            std::make_tuple(1, "test_1.txt"),
+const std::array<TestType, 3> kTestParam = {std::make_tuple(0, "test_0.txt"), std::make_tuple(1, "test_1.txt"),
                                             std::make_tuple(2, "test_2.txt")};
 
-const auto kTestTasksList =
-    std::tuple_cat(ppc::util::AddFuncTask<SmetaninDGaussVertSchMPI, InType>(
-                       kTestParam, PPC_SETTINGS_smetanin_d_gauss_vert_sch),
-                   ppc::util::AddFuncTask<SmetaninDGaussVertSchSEQ, InType>(
-                       kTestParam, PPC_SETTINGS_smetanin_d_gauss_vert_sch));
+const auto kTestTasksList = std::tuple_cat(
+    ppc::util::AddFuncTask<SmetaninDGaussVertSchMPI, InType>(kTestParam, PPC_SETTINGS_smetanin_d_gauss_vert_sch),
+    ppc::util::AddFuncTask<SmetaninDGaussVertSchSEQ, InType>(kTestParam, PPC_SETTINGS_smetanin_d_gauss_vert_sch));
 
 const auto kGtestValues = ppc::util::ExpandToValues(kTestTasksList);
 
-const auto kPerfTestName =
-    SmetaninDGaussVertSchFuncTests::PrintFuncTestName<SmetaninDGaussVertSchFuncTests>;
+const auto kPerfTestName = SmetaninDGaussVertSchFuncTests::PrintFuncTestName<SmetaninDGaussVertSchFuncTests>;
 
-INSTANTIATE_TEST_SUITE_P(GaussBandTests, SmetaninDGaussVertSchFuncTests, kGtestValues,
-                         kPerfTestName);
+INSTANTIATE_TEST_SUITE_P(GaussBandTests, SmetaninDGaussVertSchFuncTests, kGtestValues, kPerfTestName);
 
 }  // namespace
 

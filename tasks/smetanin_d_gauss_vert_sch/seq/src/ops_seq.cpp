@@ -93,8 +93,7 @@ bool SmetaninDGaussVertSchSEQ::ValidationImpl() {
     return false;
   }
 
-  const std::size_t expected_size =
-      static_cast<std::size_t>(input.n) * static_cast<std::size_t>(input.n + 1);
+  const std::size_t expected_size = static_cast<std::size_t>(input.n) * static_cast<std::size_t>(input.n + 1);
   if (input.augmented_matrix.size() != expected_size) {
     return false;
   }
