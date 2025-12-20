@@ -25,9 +25,11 @@ bool SolveDenseSystem(std::vector<double> a, int n, std::vector<double> &x) {
   const double eps = 1e-10;
   for (int i = 0; i < n; ++i) {
     int pivot = i;
-    double best = std::fabs(a[(static_cast<std::size_t>(i) * static_cast<std::size_t>(n + 1)) + static_cast<std::size_t>(i)]);
+    double best =
+        std::fabs(a[(static_cast<std::size_t>(i) * static_cast<std::size_t>(n + 1)) + static_cast<std::size_t>(i)]);
     for (int rr = i + 1; rr < n; ++rr) {
-      double val = std::fabs(a[(static_cast<std::size_t>(rr) * static_cast<std::size_t>(n + 1)) + static_cast<std::size_t>(i)]);
+      double val =
+          std::fabs(a[(static_cast<std::size_t>(rr) * static_cast<std::size_t>(n + 1)) + static_cast<std::size_t>(i)]);
       if (val > best) {
         best = val;
         pivot = rr;
@@ -38,20 +40,22 @@ bool SolveDenseSystem(std::vector<double> a, int n, std::vector<double> &x) {
     }
     if (pivot != i) {
       for (int cj = i; cj <= n; ++cj) {
-        std::swap(a[(static_cast<std::size_t>(i) * static_cast<std::size_t>(n + 1)) + static_cast<std::size_t>(cj)],
+        std::swap(
+            a[(static_cast<std::size_t>(i) * static_cast<std::size_t>(n + 1)) + static_cast<std::size_t>(cj)],
             a[(static_cast<std::size_t>(pivot) * static_cast<std::size_t>(n + 1)) + static_cast<std::size_t>(cj)]);
       }
     }
     for (int rr = i + 1; rr < n; ++rr) {
-      double factor = a[(static_cast<std::size_t>(rr) * static_cast<std::size_t>(n + 1)) + static_cast<std::size_t>(i)] /
-              a[(static_cast<std::size_t>(i) * static_cast<std::size_t>(n + 1)) + static_cast<std::size_t>(i)];
+      double factor =
+          a[(static_cast<std::size_t>(rr) * static_cast<std::size_t>(n + 1)) + static_cast<std::size_t>(i)] /
+          a[(static_cast<std::size_t>(i) * static_cast<std::size_t>(n + 1)) + static_cast<std::size_t>(i)];
       if (std::fabs(factor) < eps) {
         continue;
       }
       a[(static_cast<std::size_t>(rr) * static_cast<std::size_t>(n + 1)) + static_cast<std::size_t>(i)] = 0.0;
       for (int cj = i + 1; cj <= n; ++cj) {
         a[(static_cast<std::size_t>(rr) * static_cast<std::size_t>(n + 1)) + static_cast<std::size_t>(cj)] -=
-          factor * a[(static_cast<std::size_t>(i) * static_cast<std::size_t>(n + 1)) + static_cast<std::size_t>(cj)];
+            factor * a[(static_cast<std::size_t>(i) * static_cast<std::size_t>(n + 1)) + static_cast<std::size_t>(cj)];
       }
     }
   }
@@ -60,7 +64,8 @@ bool SolveDenseSystem(std::vector<double> a, int n, std::vector<double> &x) {
   for (int i = n - 1; i >= 0; --i) {
     double sum = a[(static_cast<std::size_t>(i) * static_cast<std::size_t>(n + 1)) + static_cast<std::size_t>(n)];
     for (int cj = i + 1; cj < n; ++cj) {
-      sum -= a[(static_cast<std::size_t>(i) * static_cast<std::size_t>(n + 1)) + static_cast<std::size_t>(cj)] * x[static_cast<std::size_t>(cj)];
+      sum -= a[(static_cast<std::size_t>(i) * static_cast<std::size_t>(n + 1)) + static_cast<std::size_t>(cj)] *
+             x[static_cast<std::size_t>(cj)];
     }
     double diag = a[(static_cast<std::size_t>(i) * static_cast<std::size_t>(n + 1)) + static_cast<std::size_t>(i)];
     if (std::fabs(diag) < eps) {
