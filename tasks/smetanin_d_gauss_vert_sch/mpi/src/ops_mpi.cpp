@@ -16,11 +16,11 @@ namespace smetanin_d_gauss_vert_sch {
 namespace {
 
 constexpr auto kLocalAt = [](std::vector<double> &data, int n, int row, int lc) -> double & {
-  return data[static_cast<std::size_t>(lc) * static_cast<std::size_t>(n) + static_cast<std::size_t>(row)];
+  return data[(static_cast<std::size_t>(lc) * static_cast<std::size_t>(n)) + static_cast<std::size_t>(row)];
 };
 
 constexpr auto kConstLocalAt = [](const std::vector<double> &data, int n, int row, int lc) -> const double & {
-  return data[static_cast<std::size_t>(lc) * static_cast<std::size_t>(n) + static_cast<std::size_t>(row)];
+  return data[(static_cast<std::size_t>(lc) * static_cast<std::size_t>(n)) + static_cast<std::size_t>(row)];
 };
 
 constexpr auto kGetOwner = [](const std::vector<int> &displs, const std::vector<int> &col_counts, int col) -> int {
@@ -53,7 +53,7 @@ void ScatterMatrix(const InType &input, int n, int start_col, int local_cols, st
     const int gc = start_col + lc;
     for (int row = 0; row < n; ++row) {
       kLocalAt(local_matrix, n, row, lc) =
-          input.augmented_matrix[static_cast<std::size_t>(row) * static_cast<std::size_t>(n + 1) +
+          input.augmented_matrix[(static_cast<std::size_t>(row) * static_cast<std::size_t>(n + 1)) +
                                  static_cast<std::size_t>(gc)];
     }
   }
