@@ -24,44 +24,44 @@ using OutType = CRSMatrix;
 using TestType = std::tuple<int, double>;
 using BaseTask = ppc::task::Task<InType, OutType>;
 
-inline CRSMatrix MultiplyCRS(const CRSMatrix &A, const CRSMatrix &B) {
-  if (A.cols != B.rows) {
+inline CRSMatrix MultiplyCRS(const CRSMatrix &a_matrix, const CRSMatrix &b_matrix) {
+  if (a_matrix.cols != b_matrix.rows) {
     throw std::invalid_argument("Incompatible matrix dimensions");
   }
 
-  CRSMatrix C;
-  C.rows = A.rows;
-  C.cols = B.cols;
-  C.row_ptr.resize(A.rows + 1);
-  C.row_ptr[0] = 0;
+  CRSMatrix c_matrix;
+  c_matrix.rows = a_matrix.rows;
+  c_matrix.cols = b_matrix.cols;
+  c_matrix.row_ptr.resize(a_matrix.rows + 1);
+  c_matrix.row_ptr[0] = 0;
 
   std::unordered_map<int, double> accumulator;
 
-  for (int i = 0; i < A.rows; ++i) {
+  for (int i = 0; i < a_matrix.rows; ++i) {
     accumulator.clear();
 
-    for (int pa = A.row_ptr[i]; pa < A.row_ptr[i + 1]; ++pa) {
-      int j = A.col_indices[pa];
-      double val = A.values[pa];
+    for (int pa = a_matrix.row_ptr[i]; pa < a_matrix.row_ptr[i + 1]; ++pa) {
+      int j = a_matrix.col_indices[pa];
+      double val = a_matrix.values[pa];
 
-      for (int pb = B.row_ptr[j]; pb < B.row_ptr[j + 1]; ++pb) {
-        int k = B.col_indices[pb];
-        accumulator[k] += val * B.values[pb];
+      for (int pb = b_matrix.row_ptr[j]; pb < b_matrix.row_ptr[j + 1]; ++pb) {
+        int k = b_matrix.col_indices[pb];
+        accumulator[k] += val * b_matrix.values[pb];
       }
     }
 
-    for (const auto &[k, v] : accumulator) {
-      if (std::abs(v) > 1e-12) {
-        C.col_indices.push_back(k);
-        C.values.push_back(v);
+    for (const auto& entry : accumulator) {
+      if (std::abs(entry.second) > 1e-12) {
+        c_matrix.col_indices.push_back(entry.first);
+        c_matrix.values.push_back(entry.second);
       }
     }
 
-    C.row_ptr[i + 1] = static_cast<int>(C.values.size());
+    c_matrix.row_ptr[i + 1] = static_cast<int>(c_matrix.values.size());
   }
 
-  C.nnz = static_cast<int>(C.values.size());
-  return C;
+  c_matrix.nnz = static_cast<int>(c_matrix.values.size());
+  return c_matrix;
 }
 
 }  // namespace smetanin_d_multiplication_of_sparse_matrices_storage_format_crs

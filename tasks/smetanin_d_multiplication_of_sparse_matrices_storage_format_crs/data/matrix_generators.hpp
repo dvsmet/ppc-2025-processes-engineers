@@ -1,11 +1,12 @@
 #pragma once
+
 #include <random>
 
-#include "../common/include/common.hpp"
+#include "../../common/include/common.hpp"
 
 namespace smetanin_d_multiplication_of_sparse_matrices_storage_format_crs {
 
-CRSMatrix GenerateRandomCRS(int rows, int cols, double density, int seed = 42) {
+inline CRSMatrix GenerateRandomCRS(int rows, int cols, double density, int seed = 42) {
   std::mt19937 gen(seed);
   std::uniform_real_distribution<double> val_dist(-10.0, 10.0);
   std::uniform_real_distribution<double> prob_dist(0.0, 1.0);
