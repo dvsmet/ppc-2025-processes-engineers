@@ -1,5 +1,7 @@
 #pragma once
+
 #include "../../common/include/common.hpp"
+#include "task/include/task.hpp"
 
 namespace smetanin_d_multiplication_of_sparse_matrices_storage_format_crs {
 
