@@ -50,7 +50,7 @@ inline CRSMatrix MultiplyCRS(const CRSMatrix &a_matrix, const CRSMatrix &b_matri
       }
     }
 
-    for (const auto& entry : accumulator) {
+    for (const auto &entry : accumulator) {
       if (std::abs(entry.second) > 1e-12) {
         c_matrix.col_indices.push_back(entry.first);
         c_matrix.values.push_back(entry.second);

@@ -311,9 +311,8 @@ bool MultiplicationSparseMatricesCRSMPI::RunImpl() {
 
   int rows_per_process = a_rows / size;
   int remainder = a_rows % size;
-  int start_row = rank < remainder 
-    ? (rank * (rows_per_process + 1))
-    : ((remainder * (rows_per_process + 1)) + ((rank - remainder) * rows_per_process));
+  int start_row = rank < remainder ? (rank * (rows_per_process + 1))
+                                   : ((remainder * (rows_per_process + 1)) + ((rank - remainder) * rows_per_process));
 
   GatherResultOnRoot(a_rows, b_cols, rows_per_process, remainder, c_local, local_rows, start_row);
 
