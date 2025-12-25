@@ -145,8 +145,7 @@ void MultiplicationSparseMatricesCRSMPI::ComputeLocalC(const CRSMatrix &a_local,
                                                        CRSMatrix &c_local) {
   c_local.rows = a_local.rows;
   c_local.cols = b_local.cols;
-  c_local.row_ptr.resize(a_local.rows + 1);
-  c_local.row_ptr[0] = 0;
+  c_local.row_ptr.resize(a_local.rows + 1, 0);
 
   std::unordered_map<int, double> accumulator;
 
@@ -201,8 +200,7 @@ void MultiplicationSparseMatricesCRSMPI::DistributeA(int a_rows, CRSMatrix &a_lo
   a_local.nnz = local_nnz;
   a_local.values.resize(local_nnz);
   a_local.col_indices.resize(local_nnz);
-  a_local.row_ptr.resize(local_rows + 1);
-  a_local.row_ptr[0] = 0;
+  a_local.row_ptr.resize(local_rows + 1, 0);
 
   if (local_nnz > 0) {
     MPI_Scatterv(rank == 0 ? a_global.values.data() : nullptr, send_counts.data(), displacements.data(), MPI_DOUBLE,
@@ -232,8 +230,7 @@ void MultiplicationSparseMatricesCRSMPI::GatherResultOnRoot(int a_rows, int b_co
     CRSMatrix c;
     c.rows = a_rows;
     c.cols = b_cols;
-    c.row_ptr.resize(a_rows + 1);
-    c.row_ptr[0] = 0;
+    c.row_ptr.resize(a_rows + 1, 0);
 
     c.values = c_local.values;
     c.col_indices = c_local.col_indices;
